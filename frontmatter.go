@@ -206,9 +206,6 @@ func (p *Parser) Parse(chunk []byte) []byte {
 	}
 }
 
-func (s *Parser) Frontmatter() {
-}
-
 func (s *Parser) Reset() {
 	//s.seekStage = seekingOpening
 	//// Create a copy which we will write our parsed output to.
