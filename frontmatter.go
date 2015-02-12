@@ -206,12 +206,8 @@ func (p *Parser) Parse(chunk []byte) []byte {
 	}
 }
 
-func (s *Parser) Reset() {
-	//s.seekStage = seekingOpening
-	//// Create a copy which we will write our parsed output to.
-	//s.frontMatter = s.frontMatterSource
-	//s.buffer.Flush()
-	//s.passThrough = false
+func (p *Parser) Reset() {
+	p.stage = seekingOpening
 }
 
 func FrontMatter(typer Typer) muta.Streamer {
