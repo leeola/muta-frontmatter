@@ -1,0 +1,4 @@
+
+github.com/smartystreets/goconvey cbae630 # Pinned to make symlinks work
+github.com/jacobsa/oglematchers # goconvey dep
+
