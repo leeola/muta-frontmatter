@@ -7,31 +7,31 @@ Context.
 
 ## Example
 
-```golang
+```go
 type BlogPost struct {
   Title   string `yaml:"title"`
   Author  string `yaml:"autor"`
 }
 
 func fmTyper(st string) (t *interface{}, err error) {
-	switch st {
+  switch st {
   case "blogpost":
-		t = BlogPost{}
-	default:
-		err = errors.New(fmt.Sprintf("Unknown FrontMatter type '%s'", st))
-	}
+    t = BlogPost{}
+  default:
+    err = errors.New(fmt.Sprintf("Unknown FrontMatter type '%s'", st))
+  }
 }
 
 func main() {
-	muta.Task("markdown", func() (*muta.Stream, error) {
-		s := muta.Src("./*.md").
-			Pipe(frontmatter.FrontMatter(fmTyper)).
+  muta.Task("markdown", func() (*muta.Stream, error) {
+    s := muta.Src("./*.md").
+      Pipe(frontmatter.FrontMatter(fmTyper)).
       Pipe(muta.Dest("./build"))
-		return s, nil
-	})
+    return s, nil
+  })
 
-	muta.Task("default", "markdown")
-	muta.Te()
+  muta.Task("default", "markdown")
+  muta.Te()
 }
 ```
 
