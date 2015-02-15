@@ -13,13 +13,14 @@ type BlogPost struct {
   Author  string `yaml:"autor"`
 }
 
-func fmTyper(st string) (t *interface{}, err error) {
+func fmTyper(st string) (t interface{}, err error) {
   switch st {
   case "blogpost":
     t = BlogPost{}
   default:
     err = errors.New(fmt.Sprintf("Unknown FrontMatter type '%s'", st))
   }
+  return
 }
 
 func main() {
