@@ -127,7 +127,6 @@ func (p *Parser) FrontMatter() (frontmatter interface{}, err error) {
 }
 
 func (p *Parser) parseClosing(chunk []byte) []byte {
-	defer func() { p.stage = notSeeking }()
 	// The buffer write/read/check/write method below is an insanely
 	// naive implementation, written to make tests pass. This needs
 	// to be improved, though i'm not sure how at the moment.
@@ -143,6 +142,7 @@ func (p *Parser) parseClosing(chunk []byte) []byte {
 		// Write the frontmatter back into the buffer, for use in the typer
 		p.buffer.Write(chunks[0])
 		p.ParsedFrontMatter = true
+		p.stage = notSeeking
 		// Return any excess data *after* the close.
 		return chunks[1]
 	}
@@ -153,6 +153,7 @@ func (p *Parser) parseClosing(chunk []byte) []byte {
 		return nil
 	} else {
 		// If our maxBufferSize is exceeded, return the bytes.
+		p.stage = notSeeking
 		return b
 	}
 }
@@ -170,14 +171,12 @@ func (p *Parser) parseOpening(chunk []byte) []byte {
 
 	for _, pair := range p.seekPairs {
 		if bytes.HasPrefix(chunk, pair[0]) {
-			// Remove the pair[0] from the chunk, so we can return
-			// excess data
-			p.buffer.Write(chunk[len(pair[0]):])
 			// We found the opening, so set this Parser to start
 			// seeking the closing.
 			p.stage = seekingClosing
-			// Return nil, because we're still buffering
-			return nil
+			// Remove the pair[0] from the chunk, so we can pass the
+			// excess data into parseClosing.
+			return p.parseClosing(chunk[len(pair[0]):])
 		}
 	}
 

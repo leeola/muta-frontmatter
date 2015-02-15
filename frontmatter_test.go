@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/leeola/muta"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -132,15 +134,6 @@ func TestParseOpening(t *testing.T) {
 		So(p.buffer.String(), ShouldEqual, "foo")
 	})
 
-	Convey("Should set seekStage to seekingClosing when match "+
-		"is found", t, func() {
-		t := func(s string) (interface{}, error) { return nil, nil }
-		p, _ := NewParser(t, [][]byte{[]byte("open"), []byte("close")})
-		So(p.parseOpening([]byte("ope")), ShouldBeNil)
-		So(p.parseOpening([]byte("n\nfoo")), ShouldBeNil)
-		So(p.stage, ShouldEqual, seekingClosing)
-	})
-
 	Convey("Should return all bytes if no match is found", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		p, _ := NewParser(t, [][]byte{[]byte("open"), []byte("close")})
@@ -162,8 +155,8 @@ func TestParse(t *testing.T) {
 	Convey("Should capture frontmatter", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		p, _ := NewParser(t, [][]byte{[]byte("open"), []byte("close")})
-		fm := []byte("this is frontmatter")
 		out := p.Parse([]byte("open\n"))
+		fm := []byte("this is frontmatter")
 		out = append(out, p.Parse(fm)...)
 		out = append(out, p.Parse([]byte("\nclose\nand this isn't"))...)
 		So(bytes.Contains(out, fm), ShouldBeFalse)
@@ -229,4 +222,48 @@ foo: bar
 		t := i.(*T)
 		So(t.Foo, ShouldEqual, "bar")
 	})
+}
+
+func TestFrontMatter(t *testing.T) {
+	Convey("Should ignore non-markdown", t, func() {
+		t := func(s string) (interface{}, error) { return nil, nil }
+		oFi := &muta.FileInfo{Name: "foo.jpg"}
+		s := FrontMatter(t)
+		fi, c, err := s(oFi, []byte("data"))
+		So(err, ShouldBeNil)
+		So(fi, ShouldEqual, oFi)
+		So(c, ShouldResemble, []byte("data"))
+	})
+
+	Convey("Should ignore data that isn't FrontMatter", t, func() {
+		t := func(s string) (interface{}, error) { return nil, nil }
+		oFi := &muta.FileInfo{Name: "foo.md"}
+		s := FrontMatter(t)
+		fi, c, err := s(oFi, []byte("non-frontmatter"))
+		So(err, ShouldBeNil)
+		So(fi, ShouldEqual, oFi)
+		So(c, ShouldResemble, []byte("non-frontmatter"))
+	})
+
+	Convey("Should return EOS while buffering frontmatter", t, func() {
+		t := func(s string) (interface{}, error) { return nil, nil }
+		oFi := &muta.FileInfo{Name: "foo.md"}
+		s := FrontMatter(t)
+		fi, _, err := s(oFi, []byte("---\nsome frontmatter data"))
+		So(err, ShouldBeNil)
+		So(fi, ShouldBeNil)
+	})
+
+	Convey("Should pass through all data after frontmatter", t, func() {
+		t := func(s string) (interface{}, error) { return nil, nil }
+		oFi := &muta.FileInfo{Name: "foo.md", Ctx: map[string]interface{}{}}
+		s := FrontMatter(t)
+		fi, c, err := s(oFi, []byte("---\nfoo: bar\n---\nbar"))
+		So(err, ShouldBeNil)
+		So(fi, ShouldEqual, oFi)
+		So(c, ShouldResemble, []byte("bar"))
+	})
+
+	Convey("Should frontmatter if EOF is reached before the closing "+
+		"frontmatter pair is found", t, nil)
 }
