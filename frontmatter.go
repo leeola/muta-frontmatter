@@ -14,10 +14,31 @@ import (
 // generated.
 type Typer func(string) (interface{}, error)
 
-//
+// Create Options with default values
+func NewOptions() Options {
+	return Options{
+		IncludeTemplate: true,
+	}
+}
+
+type Options struct {
+	// Whether or not to automatically fill in Ctx["template"] with
+	// the value of the "template" value in the FrontMatter
+	IncludeTemplate bool
+}
+
 type FrontMatterData struct {
+	// The type that will be passed to the Typer, for the caller to specify
+	// their own structs for marshalling
 	Type string `yaml:"fmtype"`
+
+	// The raw frontmatter, used to marshal into the user's struct (via
+	// the Typer)
 	Data []byte
+
+	// Exactract the Template for the muta-template plugin (for
+	// conveniece)
+	Template string
 }
 
 type seekStage uint
@@ -58,6 +79,10 @@ func NewParser(t Typer, pairs ...[][]byte) (Parser, error) {
 }
 
 type Parser struct {
+	// Cached marshalled data
+	frontMatter     interface{}
+	frontMatterData *FrontMatterData
+
 	// A buffer used to buffer the contents of the frontmatter block.
 	buffer     bytes.Buffer
 	lineBuffer bytes.Buffer
@@ -73,6 +98,7 @@ type Parser struct {
 	//	}
 	// }
 	seekPairs [][][]byte
+
 	// When parseOpening finds a pair match, this is set to the index
 	// of the pair. parseClosing then only looks for a the closing pair
 	// of this index
@@ -96,6 +122,10 @@ type Parser struct {
 
 // Get the FrontMatterData by Unmarshaling the buffer data.
 func (p *Parser) FrontMatterData() (*FrontMatterData, error) {
+	if p.frontMatterData != nil {
+		return p.frontMatterData, nil
+	}
+
 	d, _ := ioutil.ReadAll(&p.buffer)
 	// First, Marshal the yaml to get the fmtype
 	fmd := &FrontMatterData{}
@@ -104,10 +134,15 @@ func (p *Parser) FrontMatterData() (*FrontMatterData, error) {
 		return nil, err
 	}
 	fmd.Data = d
+	p.frontMatterData = fmd
 	return fmd, nil
 }
 
 func (p *Parser) FrontMatter() (frontmatter interface{}, err error) {
+	if p.frontMatter != nil {
+		return p.frontMatter, nil
+	}
+
 	fmd, err := p.FrontMatterData()
 	if err != nil {
 		return nil, err
@@ -206,10 +241,18 @@ func (p *Parser) Parse(chunk []byte) []byte {
 }
 
 func (p *Parser) Reset() {
+	p.frontMatter = nil
+	p.frontMatterData = nil
 	p.stage = seekingOpening
 }
 
-func FrontMatter(typer Typer) muta.Streamer {
+func FrontMatter(t Typer) muta.Streamer {
+	return FrontMatterOpts(t, Options{
+		IncludeTemplate: true,
+	})
+}
+
+func FrontMatterOpts(typer Typer, opts Options) muta.Streamer {
 	// Our pairs of opening and closing bytes
 	// Hardcoded for now.
 	pairs := [][][]byte{
@@ -247,6 +290,11 @@ func FrontMatter(typer Typer) muta.Streamer {
 					return fi, parsedChunk, err
 				}
 				fi.Ctx["frontmatter"] = fm
+
+				fmd, err := p.FrontMatterData()
+				if opts.IncludeTemplate && fmd.Template != "" && fi.Ctx["template"] == nil {
+					fi.Ctx["template"] = fmd.Template
+				}
 			}
 
 			return fi, parsedChunk, nil

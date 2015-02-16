@@ -264,6 +264,16 @@ func TestFrontMatter(t *testing.T) {
 		So(c, ShouldResemble, []byte("bar"))
 	})
 
-	Convey("Should frontmatter if EOF is reached before the closing "+
-		"frontmatter pair is found", t, nil)
+	Convey("Should pass through frontmatter if EOF is reached before "+
+		"the closing frontmatter pair is found", t, nil)
+
+	Convey(`Should add Ctx["template"] if opts.IncludeTemplate`, t, func() {
+		t := func(s string) (interface{}, error) { return nil, nil }
+		fi := &muta.FileInfo{Name: "foo.md", Ctx: map[string]interface{}{}}
+		s := FrontMatter(t)
+		fi, _, err := s(fi, []byte("---\ntemplate: foo.tmpl\n---\nbar"))
+		So(err, ShouldBeNil)
+		So(fi, ShouldNotBeNil)
+		So(fi.Ctx["template"], ShouldEqual, "foo.tmpl")
+	})
 }
