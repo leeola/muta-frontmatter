@@ -84,8 +84,7 @@ type Parser struct {
 	frontMatterData *FrontMatterData
 
 	// A buffer used to buffer the contents of the frontmatter block.
-	buffer     bytes.Buffer
-	lineBuffer bytes.Buffer
+	buffer bytes.Buffer
 
 	// The opening and closing bytes for the ending of the frontmatter
 	// block.
@@ -240,10 +239,22 @@ func (p *Parser) Parse(chunk []byte) []byte {
 	}
 }
 
-func (p *Parser) Reset() {
+// Reset this parser instance, and return anything that is buffered,
+// including frontmatter.
+func (p *Parser) Reset() []byte {
+	var b []byte
+	if p.buffer.Len() > 0 {
+		b, _ = ioutil.ReadAll(&p.buffer)
+		if p.stage == seekingClosing {
+			// If we're seekingClosing, prepend the opening
+			b = append(p.seekPairs[p.pairIndex][0], b...)
+		}
+	}
 	p.frontMatter = nil
 	p.frontMatterData = nil
 	p.stage = seekingOpening
+	p.ParsedFrontMatter = false
+	return b
 }
 
 func FrontMatter(t Typer) muta.Streamer {
@@ -272,9 +283,10 @@ func FrontMatterOpts(typer Typer, opts Options) muta.Streamer {
 			return fi, chunk, nil
 
 		case chunk == nil:
-			// We're at the EOF, reset our parser
-			p.Reset()
-			return fi, nil, nil
+			// We're at the EOF, reset our parser. This will fire
+			// one or more times, until p.Reset() stops returning data
+			chunk = p.Reset()
+			return fi, chunk, nil
 
 		default:
 			parsedChunk := p.Parse(chunk)
