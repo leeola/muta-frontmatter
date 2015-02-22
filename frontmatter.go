@@ -272,8 +272,8 @@ func FrontMatterOpts(typer Typer, opts Options) muta.Streamer {
 	}
 
 	p, _ := NewParser(typer, pairs...)
-	return func(fi *muta.FileInfo, chunk []byte) (*muta.FileInfo,
-		[]byte, error) {
+	return muta.NewEasyStreamer("frontmatter.Frontmatter", func(
+		fi *muta.FileInfo, chunk []byte) (*muta.FileInfo, []byte, error) {
 
 		switch {
 		case fi == nil:
@@ -303,7 +303,7 @@ func FrontMatterOpts(typer Typer, opts Options) muta.Streamer {
 				}
 				fi.Ctx["frontmatter"] = fm
 
-				fmd, err := p.FrontMatterData()
+				fmd, _ := p.FrontMatterData()
 				if opts.IncludeTemplate && fmd.Template != "" && fi.Ctx["template"] == nil {
 					fi.Ctx["template"] = fmd.Template
 				}
@@ -311,5 +311,5 @@ func FrontMatterOpts(typer Typer, opts Options) muta.Streamer {
 
 			return fi, parsedChunk, nil
 		}
-	}
+	})
 }

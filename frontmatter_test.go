@@ -228,7 +228,7 @@ func TestFrontMatter(t *testing.T) {
 	Convey("Should ignore non-markdown", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		oFi := &muta.FileInfo{Name: "foo.jpg"}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		fi, c, err := s(oFi, []byte("data"))
 		So(err, ShouldBeNil)
 		So(fi, ShouldEqual, oFi)
@@ -238,7 +238,7 @@ func TestFrontMatter(t *testing.T) {
 	Convey("Should ignore data that isn't FrontMatter", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		oFi := &muta.FileInfo{Name: "foo.md"}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		fi, c, err := s(oFi, []byte("non-frontmatter"))
 		So(err, ShouldBeNil)
 		So(fi, ShouldEqual, oFi)
@@ -248,7 +248,7 @@ func TestFrontMatter(t *testing.T) {
 	Convey("Should return EOS while buffering frontmatter", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		oFi := &muta.FileInfo{Name: "foo.md"}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		fi, _, err := s(oFi, []byte("---\nsome frontmatter data"))
 		So(err, ShouldBeNil)
 		So(fi, ShouldBeNil)
@@ -257,7 +257,7 @@ func TestFrontMatter(t *testing.T) {
 	Convey("Should pass through all data after frontmatter", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		oFi := &muta.FileInfo{Name: "foo.md", Ctx: map[string]interface{}{}}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		fi, c, err := s(oFi, []byte("---\nfoo: bar\n---\nbar"))
 		So(err, ShouldBeNil)
 		So(fi, ShouldEqual, oFi)
@@ -268,7 +268,7 @@ func TestFrontMatter(t *testing.T) {
 		"the closing frontmatter pair is found", t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		fi := &muta.FileInfo{Name: "foo.md"}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		s(fi, []byte("---\nfoo: bar"))
 		_, c, err := s(fi, nil) // EOF
 		So(err, ShouldBeNil)
@@ -281,7 +281,7 @@ func TestFrontMatter(t *testing.T) {
 	Convey(`Should add Ctx["template"] if opts.IncludeTemplate`, t, func() {
 		t := func(s string) (interface{}, error) { return nil, nil }
 		fi := &muta.FileInfo{Name: "foo.md", Ctx: map[string]interface{}{}}
-		s := FrontMatter(t)
+		s := FrontMatter(t).Stream
 		fi, _, err := s(fi, []byte("---\ntemplate: foo.tmpl\n---\nbar"))
 		So(err, ShouldBeNil)
 		So(fi, ShouldNotBeNil)
